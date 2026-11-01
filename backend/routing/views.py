@@ -39,6 +39,30 @@ def health(request):
     return JsonResponse({"status": "ok"})
 
 
+def frontend_index(request):
+    """Serve the production React build's index.html for non-API paths.
+
+    In single-service deployments the built frontend lives in
+    backend/frontend_dist/ (populated by build.sh). Unknown /api/ paths
+    stay JSON 404s instead of returning HTML.
+    """
+    from django.conf import settings
+    from django.http import FileResponse, JsonResponse
+
+    if request.path.startswith("/api/"):
+        return JsonResponse({"error": "not found"}, status=404)
+    candidates = [
+        settings.FRONTEND_BUILD_DIR / "index.html",
+        settings.STATIC_ROOT / "index.html",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return FileResponse(open(candidate, "rb"), content_type="text/html")
+    return JsonResponse(
+        {"error": "frontend build not found; run build.sh first"}, status=503
+    )
+
+
 @csrf_exempt
 def plan(request):
     if request.method != "POST":

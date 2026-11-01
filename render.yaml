@@ -1,0 +1,25 @@
+# Render Blueprint — ONE free web service serving the React frontend
+# and the Django API from a single gunicorn process. No paid plan, no
+# disk, no paid add-ons, no secrets. The app only calls keyless public
+# APIs (OSRM, Nominatim, Open-Meteo).
+services:
+  - type: web
+    name: spotter-weather-truck-routing
+    env: python
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: cd backend && gunicorn spotter.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # ALLOWED_HOSTS is intentionally NOT set here: settings.py defaults
+      # to localhost plus RENDER_EXTERNAL_HOSTNAME, which Render injects
+      # automatically for this service.
+      # CORS_ALLOWED_ORIGINS is intentionally NOT set: single-origin
+      # deployments do not need CORS; the default ("*") only matters for
+      # local two-port development.

@@ -3,9 +3,9 @@
 A React + Django web app that helps a truck driver choose the safest route
 based on weather, load weight, and travel time.
 
-> Built locally only. Nothing in this repo has been submitted to Spotter,
-> pushed to GitHub, hosted, or recorded. Those are separate steps for the
-> applicant to decide.
+> Built and verified locally, and pushed to GitHub. Nothing has been
+> hosted on Render or submitted to Spotter yet — those are separate
+> steps for the applicant to decide.
 
 ## What it does
 
@@ -54,6 +54,37 @@ npm run build      # production build (verified clean)
 To serve the built frontend against a backend on another host, set
 `VITE_API_BASE` at build time, e.g. `VITE_API_BASE=http://localhost:8000
 npm run build`.
+
+## Deploy on Render (free tier, single service — not yet deployed)
+
+`render.yaml` is a Render Blueprint for ONE free web service: the
+production React build is served by Django itself (WhiteNoise) from the
+same gunicorn process as the `/api/*` API, so no second service, disk,
+or paid add-on is needed.
+
+- Build: `./build.sh` — installs backend deps, `npm ci` + `npm run
+  build` for the frontend, copies `frontend/dist/` to
+  `backend/frontend_dist/`, and runs `collectstatic`.
+- Start: `cd backend && gunicorn spotter.wsgi:application --bind
+  0.0.0.0:$PORT`
+- Health check: `GET /api/health/` → `{"status": "ok"}`
+- Environment (set by the Blueprint, nothing else required):
+  `PYTHON_VERSION=3.12`, `DJANGO_DEBUG=0`, `DJANGO_SECRET_KEY`
+  (Render-generated). `ALLOWED_HOSTS` defaults to localhost plus
+  Render's injected `RENDER_EXTERNAL_HOSTNAME`; no secret, key, or
+  token is hardcoded anywhere — the app only calls keyless public APIs
+  (OSRM, Nominatim, Open-Meteo).
+- Still needs a human: sign in to Render, connect this GitHub repo, and
+  create the service from the Blueprint. Until a live Render URL is
+  verified, the app must NOT be described as hosted.
+
+To reproduce the production server locally (after `./build.sh`):
+
+```bash
+cd backend
+DJANGO_DEBUG=0 ./venv/bin/gunicorn spotter.wsgi:application --bind 127.0.0.1:8000
+# / serves the React build, /api/health/ and /api/plan/ serve the API
+```
 
 ## API contract
 
