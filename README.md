@@ -4,8 +4,12 @@ A React + Django web app that helps a truck driver choose the safest route
 based on weather, load weight, and travel time.
 
 > Built and verified locally, and pushed to GitHub. Nothing has been
-> hosted on Render or submitted to Spotter yet — those are separate
-> steps for the applicant to decide.
+> hosted or submitted to Spotter yet — those are separate steps for
+> the applicant to decide. Render deployment is blocked on Render
+> requiring a payment card on file even for its free tier, so the repo
+> is also prepared for PythonAnywhere's free (Beginner, no-card) tier
+> below; until a live URL is verified, the app must NOT be described
+> as hosted.
 
 ## What it does
 
@@ -85,6 +89,65 @@ cd backend
 DJANGO_DEBUG=0 ./venv/bin/gunicorn spotter.wsgi:application --bind 127.0.0.1:8000
 # / serves the React build, /api/health/ and /api/plan/ serve the API
 ```
+
+## Deploy on PythonAnywhere (free Beginner tier, no card — not yet deployed)
+
+No node build step runs on the server: the production React build is
+committed in `backend/frontend_dist/` (force-added; it stays gitignored
+for normal development), and Django serves it with WhiteNoise from the
+same WSGI process as the `/api/*` API. Exact manual steps for the
+deployer:
+
+1. **Account:** create a free Beginner account at pythonanywhere.com
+   (no payment card required). Your site domain will be
+   `<username>.pythonanywhere.com` — that username is needed in steps
+   4–5.
+2. **Clone:** from a PythonAnywhere Bash console:
+   `git clone https://github.com/awaissattar763-ctrl/spotter-weather-truck-routing.git`
+3. **Virtualenv + deps:** from the same console:
+   ```bash
+   cd spotter-weather-truck-routing
+   python3.12 -m venv ../spotter-venv   # or the newest Python your
+                                        # account offers (Django 5.1.4)
+   ../spotter-venv/bin/pip install -r backend/requirements.txt
+   ```
+   No `npm` step: `backend/frontend_dist/` is already in the clone.
+4. **Web app setup** (Web tab → Add a new web app → Manual
+   configuration, same Python version as step 3):
+   - Source code directory: `/home/<username>/spotter-weather-truck-routing/backend`
+   - Virtualenv: `/home/<username>/spotter-venv`
+   - Working directory: same as the source code directory.
+5. **WSGI configuration file** (Web tab → Code → WSGI configuration
+   file): replace its contents with
+   `docs/pythonanywhere_wsgi.py` from the repo, verbatim, editing ONLY
+   the `<username>` line and the `DJANGO_SECRET_KEY` line. Generate a
+   fresh secret at deploy time (e.g. in a Python shell:
+   `from django.core.management.utils import get_random_secret_key;
+   print(get_random_secret_key())`) — never commit a real secret.
+6. **Static files:** none extra to map — WhiteNoise serves
+   `backend/frontend_dist/` (site root, `/assets/*`) from the WSGI
+   process itself, so no PythonAnywhere static-files mapping is
+   required. (Do not map `/static/` anywhere unless you also run
+   `collectstatic`; it is not needed for this app.)
+7. **Environment variables** (Web tab → Environment variables, or set
+   them in the WSGI file as `docs/pythonanywhere_wsgi.py` already
+   does): `DJANGO_DEBUG=0`, `DJANGO_SECRET_KEY` (fresh, from step 5),
+   `PYTHONANYWHERE_HOSTNAME=<username>.pythonanywhere.com` (this is
+   what puts the site hostname into `ALLOWED_HOSTS`; `ALLOWED_HOSTS`
+   env or `PYTHONANYWHERE_USER` work as alternatives).
+8. **Reload + verify:** click Reload on the Web tab, then check
+   `https://<username>.pythonanywhere.com/` (React app loads),
+   `https://<username>.pythonanywhere.com/api/health/` →
+   `{"status": "ok"}`, and submit a sample Dallas → Houston plan
+   (expect 3 routes). Until those three checks pass on the live URL,
+   the app must NOT be described as hosted.
+
+Still needs a human: a PythonAnywhere account/sign-in (free Beginner),
+the username that forms the `.pythonanywhere.com` domain, and the
+Reload + verification in step 8. Free-tier note: PythonAnywhere free
+accounts have limited CPU seconds and their web apps may be slow to
+wake; outbound calls go to the same keyless public APIs (OSRM,
+Nominatim, Open-Meteo) and share those demo servers' rate limits.
 
 ## API contract
 

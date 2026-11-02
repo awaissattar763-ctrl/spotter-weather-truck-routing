@@ -11,11 +11,18 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 
 # Hosts: explicit ALLOWED_HOSTS env (comma-separated) wins; otherwise
 # Render's external hostname (when present) plus local defaults.
+# PythonAnywhere: set PYTHONANYWHERE_HOSTNAME to the site's hostname
+# (e.g. <username>.pythonanywhere.com), or PYTHONANYWHERE_USER to
+# derive it; no other host behaviour changes.
 _allowed = [
     h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
 if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
     _allowed.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
+if os.environ.get("PYTHONANYWHERE_HOSTNAME"):
+    _allowed.append(os.environ["PYTHONANYWHERE_HOSTNAME"])
+if os.environ.get("PYTHONANYWHERE_USER"):
+    _allowed.append(f"{os.environ['PYTHONANYWHERE_USER']}.pythonanywhere.com")
 ALLOWED_HOSTS = _allowed or ["localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
